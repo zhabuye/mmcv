@@ -80,8 +80,8 @@ void gather_points_forward_impl(int b, int c, int n, int npoints,
                                 const Tensor points, const Tensor idx,
                                 Tensor out);
 void gather_points_backward_impl(int b, int c, int n, int npoints,
-                                const Tensor grad_out, const Tensor idx,
-                                Tensor grad_points);
+                                 const Tensor grad_out, const Tensor idx,
+                                 Tensor grad_points);
 
 REGISTER_NPU_IMPL(gather_points_forward_impl, gather_points_forward_npu);
 REGISTER_NPU_IMPL(gather_points_backward_impl, gather_points_backward_npu);

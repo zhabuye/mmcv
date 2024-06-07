@@ -11,16 +11,6 @@ void sigmoid_focal_loss_forward_npu(Tensor input, Tensor target, Tensor weight,
     input_y = input.to(at::kFloat);
     output_y = output.to(at::kFloat);
   }
-  int64_t n_class = input.size(1);
-  at::Tensor target_y = at::ones_like(input);
-  if (n_class == 1) {
-    target_y = at::reshape(target, input.sizes());
-    target_y = at::mul(target_y, -1.0);
-    target_y = at::add(target_y, 1.0);
-  } else {
-    target_y = at::one_hot(target, n_class);
-  }
-  target_y = target_y.to(at::kInt);
   int64_t weight_size = weight.size(0);
   at::Tensor weight_y = at::ones_like(input_y);
   if (weight_size > 0) {
@@ -29,6 +19,19 @@ void sigmoid_focal_loss_forward_npu(Tensor input, Tensor target, Tensor weight,
       weight_y = weight_y.to(at::kFloat);
     }
   }
+  int64_t n_class = input.size(1);
+  at::Tensor target_y = at::ones_like(input);
+  if (n_class == 1) {
+    target_y = at::reshape(target, input.sizes());
+    target_y = at::mul(target_y, -1.0);
+    target_y = at::add(target_y, 1.0);
+  } else {
+    target_y = at::one_hot(target, n_class);
+    weight_y = at::mul(weight_y, target_y);
+    weight_y = at::sum(weight_y, 1, true);
+    weight_y = at::broadcast_to(weight_y, input.sizes());
+  }
+  target_y = target_y.to(at::kInt);
   OpCommand cmd;
   string reduction = "none";
   cmd.Name("SigmoidFocalLoss")
@@ -59,17 +62,6 @@ void sigmoid_focal_loss_backward_npu(Tensor input, Tensor target, Tensor weight,
     input_y = input.to(at::kFloat);
     grad_input_y = grad_input.to(at::kFloat);
   }
-  int64_t n_class = input.size(1);
-  at::Tensor target_y = at::ones_like(input);
-  if (n_class == 1) {
-    target_y = at::reshape(target, input.sizes());
-  } else {
-    target_y = at::one_hot(target, n_class);
-    target_y = at::mul(target_y, -1.0);
-    target_y = at::add(target_y, 1.0);
-  }
-  target_y = target_y.to(at::kInt);
-  at::Tensor grad_up = at::ones_like(input);
   int64_t weight_size = weight.size(0);
   at::Tensor weight_y = at::ones_like(input_y);
   if (weight_size > 0) {
@@ -78,6 +70,20 @@ void sigmoid_focal_loss_backward_npu(Tensor input, Tensor target, Tensor weight,
       weight_y = weight_y.to(at::kFloat);
     }
   }
+  int64_t n_class = input.size(1);
+  at::Tensor target_y = at::ones_like(input);
+  if (n_class == 1) {
+    target_y = at::reshape(target, input.sizes());
+  } else {
+    target_y = at::one_hot(target, n_class);
+    weight_y = at::mul(weight_y, target_y);
+    weight_y = at::sum(weight_y, 1, true);
+    weight_y = at::broadcast_to(weight_y, input.sizes());
+    target_y = at::mul(target_y, -1.0);
+    target_y = at::add(target_y, 1.0);
+  }
+  target_y = target_y.to(at::kInt);
+  at::Tensor grad_up = at::ones_like(input);
   OpCommand cmd;
   string reduction = "none";
   cmd.Name("SigmoidFocalLossGrad")
@@ -117,8 +123,10 @@ void softmax_focal_loss_forward_npu(Tensor input, Tensor target, Tensor weight,
     if (is_half) {
       weight_y = weight_y.to(at::kFloat);
     }
+    weight_y = at::mul(weight_y, target_y);
+    weight_y = at::sum(weight_y, 1, true);
+    weight_y = at::broadcast_to(weight_y, input.sizes());
   }
-  
   at::Tensor op_output = at::ones_like(input_y);
   OpCommand cmd;
   string reduction = "none";
@@ -182,6 +190,9 @@ void softmax_focal_loss_backward_npu(Tensor input, Tensor target, Tensor weight,
     if (is_half) {
       weight_y = weight_y.to(at::kFloat);
     }
+    weight_y = at::mul(weight_y, target_y);
+    weight_y = at::sum(weight_y, 1, true);
+    weight_y = at::broadcast_to(weight_y, input.sizes());
   }
   OpCommand cmd;
   string reduction = "none";
