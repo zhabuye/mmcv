@@ -34,14 +34,20 @@ void three_interpolate_backward_npu(int b, int c, int n, int m,
   TORCH_CHECK((originDtype == at::kFloat || originDtype == at::kHalf),
               "three_interpolate_backward ascend only support fp32 and fp16.");
 
-  auto grad_x = at::unsqueeze(grad_out, 3);
-  auto grad_y = at::unsqueeze(grad_points, 3);
+  auto grad_x = at::unsqueeze(grad_out, 3).to(at::kFloat);
+  auto grad_y = at::unsqueeze(grad_points, 3).to(at::kFloat);
+  auto weight_cast = weight.to(at::kFloat);
+  EXEC_NPU_CMD(aclnnThreeInterpolateBackward, grad_x, idx, weight_cast, m,
+               grad_y);
 
-  EXEC_NPU_CMD(aclnnThreeInterpolateBackward, grad_x, idx, weight, m, grad_y);
-
-  auto output = at::squeeze(grad_y, 3);
+  auto grad_y_cast = grad_y;
+  if (originDtype == at::kHalf) {
+    grad_y_cast = grad_y.to(at::kHalf);
+  }
+  auto output = at::squeeze(grad_y_cast, 3);
   auto res = output.contiguous();
   grad_points.copy_(res);
+
 }
 
 void three_interpolate_forward_impl(int b, int c, int m, int n,
