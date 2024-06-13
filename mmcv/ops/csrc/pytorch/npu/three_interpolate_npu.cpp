@@ -47,7 +47,6 @@ void three_interpolate_backward_npu(int b, int c, int n, int m,
   auto output = at::squeeze(grad_y_cast, 3);
   auto res = output.contiguous();
   grad_points.copy_(res);
-
 }
 
 void three_interpolate_forward_impl(int b, int c, int m, int n,
