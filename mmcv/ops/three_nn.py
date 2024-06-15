@@ -47,7 +47,7 @@ class ThreeNN(Function):
             dist2 = torch.sqrt(dist2)
             if dtype_ == torch.float16:
                 dist2 = dist2.half()
-            return dist2, idx.type(torch.IntTensor).npu()
+            return dist2, idx.int()
         dist2 = target.new_empty(B, N, 3)
         idx = target.new_empty(B, N, 3, dtype=torch.int32)
 
