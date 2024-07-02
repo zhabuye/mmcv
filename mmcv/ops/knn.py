@@ -70,7 +70,7 @@ class KNN(Function):
             zeros_idx = torch.zeros(xyz.shape[0], center_xyz.shape[1], k, dtype=torch.int32).npu()
             idx.where(dist2 >= 1e10, zeros_idx)
             idx = idx.transpose(2, 1).contiguous() # [B, k, npoint]
-            return idx.type(torch.IntTensor)
+            return idx.int()
 
         idx = center_xyz.new_zeros((B, npoint, k)).int()
         dist2 = center_xyz.new_zeros((B, npoint, k)).float()
